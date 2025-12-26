@@ -34,6 +34,8 @@ class AwsStack(Stack):
         # =======================================
         #          LAMBDA FUNCTIONS
         # =======================================
+
+        # Create Task
         create_task_lambda = _lambda.Function(
             self,
             "CreateTaskLambda",
@@ -46,8 +48,22 @@ class AwsStack(Stack):
                 "TASKS_TABLE_NAME": self.tasks_table.table_name
             }
         )
-
         self.tasks_table.grant_write_data(create_task_lambda)
+
+        # Get Task
+        get_task_lambda = _lambda.Function(
+            self,
+            "GetTaskLambda",
+            runtime=_lambda.Runtime.PYTHON_3_11,
+            handler="handler.lambda_handler",
+            code=_lambda.Code.from_asset(
+                os.path.join("lambdas", "get_task")
+            ),
+            environment={
+                "TASKS_TABLE_NAME": self.tasks_table.table_name
+            }
+        )
+        self.tasks_table.grant_read_data(get_task_lambda)
 
         # =======================================
         #          API GATEWAY SETUP
@@ -58,12 +74,21 @@ class AwsStack(Stack):
             rest_api_name="Tasks Service",
             description="Servesless Tasks Service."
         )
-
         tasks_resource = api.root.add_resource("tasks")
+
+        # Create Task
         tasks_resource.add_method(
             "POST",
             apigateway.LambdaIntegration(
                 cast(IFunction, create_task_lambda)) #TODO: Check cast
+        )
+
+        # Get Task
+        task_id_resource = tasks_resource.add_resource("{taskId}")
+        task_id_resource.add_method(
+            "GET",
+            apigateway.LambdaIntegration(
+                cast(IFunction, get_task_lambda)) #TODO: Check cast
         )
 
 

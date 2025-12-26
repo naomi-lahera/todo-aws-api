@@ -2,50 +2,52 @@ import json
 import os
 import uuid
 import boto3
+from pydantic import ValidationError
+from models import CreateTaskRequest
+from utils import create_response
 
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(os.environ["TASKS_TABLE_NAME"])
 
-VALID_STATUSES = {"pending", "in-progress", "completed"}
 
 def lambda_handler(event, context):
+    """
+    Create a new task
+    """
     try:
         body = json.loads(event.get("body", "{}"))
-
-        title = body.get("title")
-        description = body.get("description")
-        status = body.get("status")
-
-        if not title or not description or not status:
-            return {
-                "statusCode": 400,
-                "body": json.dumps({"message": "Missing required fields"})
-            }
-
-        if status not in VALID_STATUSES:
-            return {
-                "statusCode": 400,
-                "body": json.dumps({"message": "Invalid status value"})
-            }
+        
+        try:
+            task_request = CreateTaskRequest(**body)
+        except ValidationError as e:
+            error_messages = [f"{err['loc'][0]}: {err['msg']}" for err in e.errors()]
+            return create_response(
+                400,
+                message="Validation error",
+                error="; ".join(error_messages)
+            )
 
         task_id = str(uuid.uuid4())
-
         item = {
             "taskId": task_id,
-            "title": title,
-            "description": description,
-            "status": status
+            "title": task_request.title,
+            "description": task_request.description,
+            "status": task_request.status
         }
 
         table.put_item(Item=item)
 
-        return {
-            "statusCode": 201,
-            "body": json.dumps(item)
-        }
+        return create_response(201, data=item)
 
+    except json.JSONDecodeError:
+        return create_response(
+            400,
+            message="Invalid JSON in request body"
+        )
+    
     except Exception as e:
-        return {
-            "statusCode": 500,
-            "body": json.dumps({"message": str(e)})
-        }
+        return create_response(
+            500,
+            error=str(e)
+        )
+

@@ -2,6 +2,7 @@
 Pydantic models for Task validation
 """
 from pydantic import BaseModel, Field, field_validator
+from typing import Optional
 from enum import Enum
 
 
@@ -16,7 +17,7 @@ class CreateTaskRequest(BaseModel):
     """Validation model for creating a task"""
     title: str = Field(..., min_length=1, max_length=255, description="Task title")
     description: str = Field(..., min_length=1, max_length=1000, description="Task description")
-    status: TaskStatus = Field(..., description="Task status")
+    status: TaskStatus = Field(TaskStatus.PENDING, description="Task status")
 
     class Config:
         use_enum_values = True
@@ -35,6 +36,30 @@ class CreateTaskRequest(BaseModel):
             )
         return v
 
+class UpdateTaskRequest(BaseModel):
+    """Validate model for updating a task"""
+    title: Optional[str] = Field(None, min_length=1, max_length=255, description="Task title")
+    description: Optional[str] = Field(None, min_length=1, max_length=1000, description="Task description")
+    status: Optional[TaskStatus] = Field(None, description="Task status")
+
+    class Config:
+        use_enum_values = True
+
+    @field_validator('status', mode='before')
+    @classmethod
+    def validate_status(cls, v):
+        """Validate that status is one of the valid values"""
+        if v is None:
+            return v
+        if isinstance(v, TaskStatus):
+            return v
+        
+        valid_statuses = [status.value for status in TaskStatus]
+        if v not in valid_statuses:
+            raise ValueError(
+                f"Invalid status '{v}'. Must be one of: {', '.join(valid_statuses)}"
+            )
+        return v
 
 class TaskResponse(BaseModel):
     """Response model for a task"""

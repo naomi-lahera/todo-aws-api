@@ -65,6 +65,21 @@ class AwsStack(Stack):
         )
         self.tasks_table.grant_read_data(get_task_lambda)
 
+        # Update Task
+        update_task_lambda = _lambda.Function(
+            self,
+            "UpdateTaskLambda",
+            runtime=_lambda.Runtime.PYTHON_3_11,
+            handler="handler.lambda_handler",
+            code=_lambda.Code.from_asset(
+                os.path.join("lambdas", "update_task")
+            ),
+            environment={
+                "TASKS_TABLE_NAME": self.tasks_table.table_name
+            }
+        )
+        self.tasks_table.grant_read_write_data(update_task_lambda)
+
         # =======================================
         #          API GATEWAY SETUP
         # =======================================
@@ -80,7 +95,7 @@ class AwsStack(Stack):
         tasks_resource.add_method(
             "POST",
             apigateway.LambdaIntegration(
-                cast(IFunction, create_task_lambda)) #TODO: Check cast
+                cast(IFunction, create_task_lambda))
         )
 
         # Get Task
@@ -88,9 +103,15 @@ class AwsStack(Stack):
         task_id_resource.add_method(
             "GET",
             apigateway.LambdaIntegration(
-                cast(IFunction, get_task_lambda)) #TODO: Check cast
+                cast(IFunction, get_task_lambda))
         )
 
+        # Update Task 
+        task_id_resource.add_method(
+            "PUT",
+            apigateway.LambdaIntegration(
+                cast(IFunction, update_task_lambda))
+        )
 
         # The code that defines your stack goes here
 

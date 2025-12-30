@@ -7,7 +7,7 @@ from aws_cdk import (
     aws_apigateway as apigateway,   
     # aws_sqs as sqs,
 )
-from aws_cdk.aws_lambda import IFunction
+from aws_cdk.aws_lambda import IFunction, LayerVersion
 import os
 from typing import cast
 from constructs import Construct
@@ -16,7 +16,6 @@ class AwsStack(Stack):
 
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
-
         # =======================================
         #          DATABASE SETUP
         # =======================================
@@ -31,6 +30,32 @@ class AwsStack(Stack):
             billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST
             )
 
+        
+        # =======================================
+        #          LAMBDA LAYERS SETUP
+        # =======================================
+        common_layer = LayerVersion(
+            self,
+            "CommonLayer",
+            code=_lambda.Code.from_asset(
+                os.path.join("lambdas", "layers", "common")
+            ),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_11],
+            description="Common layer with models and utilities"
+        )
+
+        # Layer de Pydantic
+        pydantic_layer = LayerVersion(
+            self,
+            "PydanticLayer",
+            code=_lambda.Code.from_asset(
+                os.path.join("lambdas", "layers", "pydantic_layer")
+            ),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_11],
+            description="Pydantic dependencies layer"
+        )
+
+
         # =======================================
         #          LAMBDA FUNCTIONS
         # =======================================
@@ -44,6 +69,7 @@ class AwsStack(Stack):
             code=_lambda.Code.from_asset(
                 os.path.join("lambdas", "create_task")
             ),
+            layers=[common_layer, pydantic_layer],
             environment={
                 "TASKS_TABLE_NAME": self.tasks_table.table_name
             }
@@ -59,6 +85,7 @@ class AwsStack(Stack):
             code=_lambda.Code.from_asset(
                 os.path.join("lambdas", "get_task")
             ),
+            layers=[common_layer],
             environment={
                 "TASKS_TABLE_NAME": self.tasks_table.table_name
             }
@@ -74,11 +101,29 @@ class AwsStack(Stack):
             code=_lambda.Code.from_asset(
                 os.path.join("lambdas", "update_task")
             ),
+            layers=[common_layer, pydantic_layer],
             environment={
                 "TASKS_TABLE_NAME": self.tasks_table.table_name
             }
         )
         self.tasks_table.grant_read_write_data(update_task_lambda)
+
+        # Delete Task
+        delete_task_lambda = _lambda.Function(
+            self,
+            "DeleteTaskLambda",
+            runtime=_lambda.Runtime.PYTHON_3_11,
+            handler="handler.lambda_handler",
+            code=_lambda.Code.from_asset(
+                os.path.join("lambdas", "delete_task")
+            ),
+            layers=[common_layer, pydantic_layer],
+            environment={
+                "TASKS_TABLE_NAME": self.tasks_table.table_name
+            }
+        )
+        self.tasks_table.grant_write_data(delete_task_lambda)
+
 
         # =======================================
         #          API GATEWAY SETUP
@@ -113,10 +158,9 @@ class AwsStack(Stack):
                 cast(IFunction, update_task_lambda))
         )
 
-        # The code that defines your stack goes here
-
-        # example resource
-        # queue = sqs.Queue(
-        #     self, "AwsQueue",
-        #     visibility_timeout=Duration.seconds(300),
-        # )
+        task_id_resource.add_method(
+            "DELETE",
+            apigateway.LambdaIntegration(
+                cast(IFunction, delete_task_lambda)
+            )
+        )

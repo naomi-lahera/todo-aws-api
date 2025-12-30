@@ -4,9 +4,12 @@ import boto3
 from utils import create_response
 from pydantic import ValidationError
 from models import UpdateTaskRequest
+import logging
+from botocore.exceptions import ClientError
 
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(os.environ["TASKS_TABLE_NAME"])
+logger = logging.getLogger(__name__)
 
 def lambda_handler(event, context):
     """
@@ -51,6 +54,14 @@ def lambda_handler(event, context):
 
     except ValidationError as e:
         return create_response(400, {"errors": e.errors()})
+    
+    except ClientError as err:
+        logger.error(
+            "Couldn't update task %s. Here's why: %s: %s",
+            err.response["Error"]["Code"],
+            err.response["Error"]["Message"],
+        )
+        return create_response(400, {"errors": err.response["Error"]["Message"]})
 
     except Exception as e:
         return create_response(500, {"message": str(e)})

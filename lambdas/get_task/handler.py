@@ -1,10 +1,12 @@
-import json
 import os
 import boto3
+from botocore.exceptions import ClientError
+import logging
 from utils import create_response
 
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(os.environ["TASKS_TABLE_NAME"])
+logger = logging.getLogger(__name__)
 
 def lambda_handler(event, context):
     """
@@ -30,6 +32,14 @@ def lambda_handler(event, context):
         
         return create_response(200, data=item)
     
+    except ClientError as err:
+        logger.error(
+            "Couldn't get task %s. Here's why: %s: %s",
+            err.response["Error"]["Code"],
+            err.response["Error"]["Message"],
+        )
+        return create_response(400, {"errors": err.response["Error"]["Message"]})
+        
     except Exception as e:
         return create_response(
             500,

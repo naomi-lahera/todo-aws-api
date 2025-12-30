@@ -3,12 +3,14 @@ import os
 import uuid
 import boto3
 from pydantic import ValidationError
+import logging
+from botocore.exceptions import ClientError
 from models import CreateTaskRequest
 from utils import create_response
 
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(os.environ["TASKS_TABLE_NAME"])
-
+logger = logging.getLogger(__name__)
 
 def lambda_handler(event, context):
     """
@@ -39,11 +41,16 @@ def lambda_handler(event, context):
 
         return create_response(201, data=item)
 
-    except json.JSONDecodeError:
-        return create_response(
-            400,
-            message="Invalid JSON in request body"
+    except ValidationError as e:
+        return create_response(400, {"errors": e.errors()})
+    
+    except ClientError as err:
+        logger.error(
+            "Couldn't create task %s. Here's why: %s: %s",
+            err.response["Error"]["Code"],
+            err.response["Error"]["Message"],
         )
+        return create_response(400, {"errors": err.response["Error"]["Message"]})
     
     except Exception as e:
         return create_response(

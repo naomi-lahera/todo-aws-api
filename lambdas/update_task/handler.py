@@ -13,7 +13,6 @@ def lambda_handler(event, context):
     Update task
     """
     try:
-        # 1. Obtener taskId
         task_id = event.get("pathParameters", {}).get("taskId")
         if not task_id:
             return create_response(400, {"message": "taskId is required"})
@@ -26,20 +25,24 @@ def lambda_handler(event, context):
         expression_names = {}
 
         for field, value in task_request.model_dump(exclude_none=True).items():
-            update_expression.append(f"#${field} = :{field}")
+            update_expression.append(f"#{field}=:{field}")
             expression_values[f":{field}"] = value
-            expression_names[f"#${field}"] = field
+            expression_names[f"#{field}"] = field
 
         if not update_expression:
             return create_response(400, {"message": "No fields to update"})
 
-        response = table.update_item(
-            Key={"taskId": task_id},
-            UpdateExpression="SET " + ", ".join(update_expression),
-            ExpressionAttributeValues=expression_values,
-            ExpressionAttributeNames=expression_names,
-            ReturnValues="ALL_NEW"
-        )
+        update_params = {
+            "Key": {"taskId": task_id},
+            "UpdateExpression": "SET " + ", ".join(update_expression),
+            "ExpressionAttributeValues": expression_values,
+            "ReturnValues": "ALL_NEW"
+        }
+        
+        if expression_names:
+            update_params["ExpressionAttributeNames"] = expression_names
+
+        response = table.update_item(**update_params)
 
         return create_response(200, {
             "message": "Task updated successfully",

@@ -13,9 +13,9 @@ A complete serverless application on AWS using AWS CDK with Python. Includes:
 
 The following must be installed before proceeding:
 
-- **Python 3.11+**: Download from [python.org](https://www.python.org)
-- **AWS CLI**: Download from [aws.amazon.com/cli](https://aws.amazon.com/cli)
-- **Node.js 14+**: Required by CDK - download from [nodejs.org](https://nodejs.org)
+- **Python 3.11+**
+- **AWS CLI**
+- **Node.js 14+**
 - **AWS Account**: With configured credentials
 
 ### Step 1: Extract the Project
@@ -40,7 +40,7 @@ When prompted, the following information must be provided:
 
 **Windows (PowerShell):**
 ```powershell
-python -m venv venv
+python -m venv .venv
 .\venv\Scripts\Activate.ps1
 ```
 
@@ -82,15 +82,7 @@ cdk synth
 
 The CloudFormation template must be generated without deploying.
 
-**Step 2: Review Changes (Optional)**
-
-```bash
-cdk diff
-```
-
-Resources that will be created, modified, or deleted must be reviewed.
-
-**Step 3: Deploy the Stack**
+**Step 2: Deploy the Stack**
 
 ```bash
 cdk deploy
@@ -101,20 +93,6 @@ The following must occur when deploying:
 2. Confirmation must be requested (type `y` to confirm)
 3. The stack must be deployed to the AWS account
 4. Stack outputs must be displayed including API endpoint URL
-
-**Step 4: Verify Deployment**
-
-The CloudFormation stack status must be checked:
-
-```bash
-aws cloudformation describe-stacks --stack-name AwsStack --query "Stacks[0].StackStatus"
-```
-
-The API endpoint must be viewed:
-
-```bash
-aws cloudformation describe-stacks --stack-name AwsStack --query "Stacks[0].Outputs"
-```
 
 ## Cleanup
 

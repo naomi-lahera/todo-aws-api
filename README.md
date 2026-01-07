@@ -103,4 +103,18 @@ cdk destroy
 - Lambda layers
 - IAM roles and policies
 
+**Important Note - DynamoDB Table Deletion**:
+
+The DynamoDB table **will be deleted** when running `cdk destroy` because it is configured with:
+- `RemovalPolicy.DESTROY`: Allows the table to be removed when the stack is destroyed
+- `deletion_protection = False`: No protection against deletion
+
+This configuration was chosen for **development environments** where resources can be easily recreated.
+
+**For Production Environments**, the configuration must be changed to:
+- `RemovalPolicy.RETAIN`: Keeps the table even when the stack is destroyed
+- `deletion_protection = True`: Adds protection against accidental deletion
+
+These changes must be made in the CDK stack definition before deploying to production to ensure data protection.
+
 Confirmation must be provided by typing `y` when prompted.

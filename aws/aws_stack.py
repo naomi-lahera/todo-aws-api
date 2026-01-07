@@ -7,6 +7,7 @@ from aws_cdk import (
     aws_apigateway as apigateway,   
     # aws_sqs as sqs,
 )
+from aws_cdk import RemovalPolicy
 from aws_cdk.aws_lambda import IFunction, LayerVersion
 import os
 from typing import cast
@@ -27,6 +28,8 @@ class AwsStack(Stack):
                 name="taskId",
                 type=dynamodb.AttributeType.STRING
             ),
+            deletion_protection=False,
+            removal_policy=RemovalPolicy.DESTROY,
             billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST
             )
 

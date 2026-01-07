@@ -25,7 +25,7 @@ The following must be installed before proceeding:
 The project must be extracted from the .zip file. The extracted folder should be named `task-aws-api-main`. Once extracted, you must navigate into the project folder:
 
 ```bash
-cd task-aws-api
+cd task-aws-api-main
 ```
 
 ### Step 2: Configure AWS Credentials

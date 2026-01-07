@@ -22,7 +22,7 @@ The following must be installed before proceeding:
 
 ### Step 1: Extract the Project
 
-The project must be extracted from the .zip file. The extracted folder should be named `task-aws-api`. Once extracted, you must navigate into the project folder:
+The project must be extracted from the .zip file. The extracted folder should be named `task-aws-api-main`. Once extracted, you must navigate into the project folder:
 
 ```bash
 cd task-aws-api
